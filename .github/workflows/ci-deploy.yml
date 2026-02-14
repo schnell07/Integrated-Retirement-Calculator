@@ -21,9 +21,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run lint & tests (if any)
-        run: |
-          npm run build
+      - name: Run build
+        run: npm run build
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -32,43 +31,39 @@ jobs:
           path: dist
 
   deploy:
-    name: Deploy (Netlify, optional)
+    name: Deploy (Vercel/Netlify)
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/main' && (secrets.NETLIFY_AUTH_TOKEN != '' || secrets.VERCEL_TOKEN != '') }}
+    if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Netlify CLI
-        run: npm install -g netlify-cli
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
 
-      - name: Deploy to Netlify (if configured)
-        if: ${{ secrets.NETLIFY_AUTH_TOKEN != '' }}
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-        run: |
-          netlify deploy --dir=dist --prod --site=$NETLIFY_SITE_ID --auth=$NETLIFY_AUTH_TOKEN
-
-      - name: Deploy to Vercel (if configured)
-        if: ${{ secrets.VERCEL_TOKEN != '' }}
+      - name: Deploy to Vercel
+        if: env.VERCEL_TOKEN != ''
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           npm install -g vercel
-          # Deploy using Vercel CLI; if your project is already linked to Vercel this will publish to your project
           vercel --prod --token $VERCEL_TOKEN --confirm
 
   smoke-test:
-    name: Post-deploy smoke test (optional)
+    name: Post-deploy smoke test
     needs: deploy
     runs-on: ubuntu-latest
-    if: ${{ secrets.DEPLOY_URL != '' }}
+    if: github.ref == 'refs/heads/main' && env.DEPLOY_URL != ''
     steps:
       - name: Wait for site warmup
         run: sleep 10
 
       - name: Curl deployed URL
+        env:
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
         run: |
           echo "Testing ${DEPLOY_URL}"
           status=$(curl -s -o /dev/null -w "%{http_code}" "${DEPLOY_URL}")
@@ -76,14 +71,12 @@ jobs:
           if [ "$status" -ne 200 ]; then
             echo "Smoke test failed: non-200 response"; exit 1
           fi
-        env:
-          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
 
   integration-tests:
     name: Integration Tests (Playwright)
     needs: deploy
     runs-on: ubuntu-latest
-    if: ${{ secrets.DEPLOY_URL != '' }}
+    if: github.ref == 'refs/heads/main' && env.DEPLOY_URL != ''
     steps:
       - uses: actions/checkout@v4
 
