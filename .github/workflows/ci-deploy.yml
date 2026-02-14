@@ -101,8 +101,8 @@ jobs:
           DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
         run: |
           if [ -z "$DEPLOY_URL" ]; then
-            echo "DEPLOY_URL not set, skipping integration tests"
-            exit 0
+            echo "❌ DEPLOY_URL secret not set. Please add it to GitHub repository secrets."
+            exit 1
           fi
           npm run test
 
