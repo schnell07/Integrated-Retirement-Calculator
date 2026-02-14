@@ -12,9 +12,31 @@ export default function FinancialInputsForm({ data, onUpdate }: FinancialInputsF
   const { financialInputs } = data;
 
   const handleChange = (field: keyof FinancialInputs, value: string) => {
+    const numValue = Number(value);
+    
+    // Validate growth rate fields to prevent infinite loops
+    // Growth rates should be between -0.5 and 0.5 (i.e., -50% to +50%)
+    if (field === 'growthRateLowerLimit' || field === 'growthRateUpperLimit' || 
+        field === 'investmentGrowthPreRetirement' || field === 'investmentGrowthPostRetirement') {
+      if (numValue < -50 || numValue > 50) {
+        console.warn(`${field} must be between -50% and 50%`);
+        return; // Ignore invalid input
+      }
+    }
+
+    // Ensure lower limit is not greater than upper limit
+    if (field === 'growthRateLowerLimit' && numValue > financialInputs.growthRateUpperLimit * 100) {
+      console.warn('Lower limit growth rate cannot exceed upper limit');
+      return;
+    }
+    if (field === 'growthRateUpperLimit' && numValue < financialInputs.growthRateLowerLimit * 100) {
+      console.warn('Upper limit growth rate cannot be less than lower limit');
+      return;
+    }
+
     onUpdate({
       ...financialInputs,
-      [field]: Number(value),
+      [field]: numValue / 100, // Convert from percentage
     });
   };
 
@@ -29,10 +51,10 @@ export default function FinancialInputsForm({ data, onUpdate }: FinancialInputsF
             <input
               type="number"
               value={financialInputs.investmentGrowthPreRetirement * 100}
-              onChange={(e) => handleChange('investmentGrowthPreRetirement', `${Number(e.target.value) / 100}`)}
+              onChange={(e) => handleChange('investmentGrowthPreRetirement', e.target.value)}
               step={0.1}
-              min={0}
-              max={15}
+              min={-50}
+              max={50}
               className="w-full"
             />
             <div className="form-hint">
@@ -45,10 +67,10 @@ export default function FinancialInputsForm({ data, onUpdate }: FinancialInputsF
             <input
               type="number"
               value={financialInputs.investmentGrowthPostRetirement * 100}
-              onChange={(e) => handleChange('investmentGrowthPostRetirement', `${Number(e.target.value) / 100}`)}
+              onChange={(e) => handleChange('investmentGrowthPostRetirement', e.target.value)}
               step={0.1}
-              min={0}
-              max={15}
+              min={-50}
+              max={50}
               className="w-full"
             />
             <div className="form-hint">
@@ -68,10 +90,10 @@ export default function FinancialInputsForm({ data, onUpdate }: FinancialInputsF
             <input
               type="number"
               value={financialInputs.growthRateLowerLimit * 100}
-              onChange={(e) => handleChange('growthRateLowerLimit', `${Number(e.target.value) / 100}`)}
+              onChange={(e) => handleChange('growthRateLowerLimit', e.target.value)}
               step={0.5}
-              min={0}
-              max={10}
+              min={-50}
+              max={50}
               className="w-full"
             />
             <div className="form-hint">
@@ -84,10 +106,10 @@ export default function FinancialInputsForm({ data, onUpdate }: FinancialInputsF
             <input
               type="number"
               value={financialInputs.growthRateUpperLimit * 100}
-              onChange={(e) => handleChange('growthRateUpperLimit', `${Number(e.target.value) / 100}`)}
+              onChange={(e) => handleChange('growthRateUpperLimit', e.target.value)}
               step={0.5}
-              min={0}
-              max={15}
+              min={-50}
+              max={50}
               className="w-full"
             />
             <div className="form-hint">
@@ -106,10 +128,10 @@ export default function FinancialInputsForm({ data, onUpdate }: FinancialInputsF
             <input
               type="number"
               value={financialInputs.inflationRate * 100}
-              onChange={(e) => handleChange('inflationRate', `${Number(e.target.value) / 100}`)}
+              onChange={(e) => handleChange('inflationRate', e.target.value)}
               step={0.1}
               min={0}
-              max={10}
+              max={50}
               className="w-full"
             />
             <div className="form-hint">
@@ -122,7 +144,7 @@ export default function FinancialInputsForm({ data, onUpdate }: FinancialInputsF
             <input
               type="number"
               value={financialInputs.taxRate * 100}
-              onChange={(e) => handleChange('taxRate', `${Number(e.target.value) / 100}`)}
+              onChange={(e) => handleChange('taxRate', e.target.value)}
               step={0.1}
               min={0}
               max={50}
@@ -159,7 +181,7 @@ export default function FinancialInputsForm({ data, onUpdate }: FinancialInputsF
             <input
               type="number"
               value={financialInputs.survivorExpensePercentage * 100}
-              onChange={(e) => handleChange('survivorExpensePercentage', `${Number(e.target.value) / 100}`)}
+              onChange={(e) => handleChange('survivorExpensePercentage', e.target.value)}
               step={1}
               min={25}
               max={100}

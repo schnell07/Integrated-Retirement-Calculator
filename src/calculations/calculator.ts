@@ -41,6 +41,28 @@ export class RetirementCalculator {
       if (currentYear < 1900 || currentYear > 2100) {
         throw new Error('Current year must be between 1900 and 2100');
       }
+
+      // Validate growth rate bounds to prevent infinite loops
+      const lower = this.data.financialInputs.growthRateLowerLimit;
+      const upper = this.data.financialInputs.growthRateUpperLimit;
+      const preRet = this.data.financialInputs.investmentGrowthPreRetirement;
+      const postRet = this.data.financialInputs.investmentGrowthPostRetirement;
+
+      if (lower < -0.5 || lower > 0.5) {
+        throw new Error('Lower limit growth rate must be between -50% and +50%');
+      }
+      if (upper < -0.5 || upper > 0.5) {
+        throw new Error('Upper limit growth rate must be between -50% and +50%');
+      }
+      if (lower > upper) {
+        throw new Error('Lower limit growth rate cannot be higher than upper limit');
+      }
+      if (preRet < -0.5 || preRet > 0.5) {
+        throw new Error('Pre-retirement growth rate must be between -50% and +50%');
+      }
+      if (postRet < -0.5 || postRet > 0.5) {
+        throw new Error('Post-retirement growth rate must be between -50% and +50%');
+      }
     
     // Calculate projection end year - latest life expectancy year
     const latestDeathYear = Math.max(
