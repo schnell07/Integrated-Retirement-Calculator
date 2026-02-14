@@ -1,0 +1,113 @@
+name: CI Build and Deploy
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint & tests (if any)
+        run: |
+          npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+  deploy:
+    name: Deploy (Netlify, optional)
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && (secrets.NETLIFY_AUTH_TOKEN != '' || secrets.VERCEL_TOKEN != '')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Netlify CLI
+        run: npm install -g netlify-cli
+
+      - name: Deploy to Netlify (if configured)
+        if: secrets.NETLIFY_AUTH_TOKEN != ''
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          netlify deploy --dir=dist --prod --site=$NETLIFY_SITE_ID --auth=$NETLIFY_AUTH_TOKEN
+
+      - name: Deploy to Vercel (if configured)
+        if: secrets.VERCEL_TOKEN != ''
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          npm install -g vercel
+          # Deploy using Vercel CLI; if your project is already linked to Vercel this will publish to your project
+          vercel --prod --token $VERCEL_TOKEN --confirm
+
+  smoke-test:
+    name: Post-deploy smoke test (optional)
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: secrets.DEPLOY_URL != ''
+    steps:
+      - name: Wait for site warmup
+        run: sleep 10
+
+      - name: Curl deployed URL
+        run: |
+          echo "Testing ${DEPLOY_URL}"
+          status=$(curl -s -o /dev/null -w "%{http_code}" "${DEPLOY_URL}")
+          echo "HTTP status: $status"
+          if [ "$status" -ne 200 ]; then
+            echo "Smoke test failed: non-200 response"; exit 1
+          fi
+        env:
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
+
+  integration-tests:
+    name: Integration Tests (Playwright)
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: secrets.DEPLOY_URL != ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run integration tests
+        env:
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
+        run: npm run test
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30

@@ -1,0 +1,26 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+.vscode/
+*.suo
+*.sln.iml
+.idea/
+.cache/
+coverage/
+.next/
+out/
+*.tgz
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+# Playwright
+test-results/
+playwright-report/
+.auth/

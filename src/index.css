@@ -1,0 +1,192 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  @apply scroll-smooth;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+html {
+  @apply font-sans;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  @apply bg-gray-950 text-gray-100;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-900;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-neon-green rounded-full hover:bg-neon-green/80;
+}
+
+/* Smooth transitions */
+button,
+input,
+select,
+textarea {
+  @apply transition-colors duration-200;
+}
+
+/* Chart styling */
+.chart-container {
+  @apply p-6 bg-gray-900 rounded-lg border border-gray-800;
+}
+
+/* Input styling */
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select,
+textarea {
+  @apply bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-neon-green focus:ring-1 focus:ring-neon-green/30;
+}
+
+/* Button styling */
+button {
+  @apply px-4 py-2 rounded font-medium focus:outline-none transition-all duration-200;
+}
+
+.btn-primary {
+  @apply bg-neon-green text-black hover:bg-neon-green/80 font-bold focus:ring-2 focus:ring-neon-green/50;
+}
+
+.btn-secondary {
+  @apply bg-gray-800 text-white hover:bg-gray-700 focus:ring-2 focus:ring-gray-600 border border-gray-700;
+}
+
+.btn-danger {
+  @apply bg-red-600 text-white hover:bg-red-700 focus:ring-2 focus:ring-red-400;
+}
+
+.btn-success {
+  @apply bg-neon-green text-black hover:bg-neon-green/80 focus:ring-2 focus:ring-neon-green/50 font-bold;
+}
+
+/* Card styling */
+.card {
+  @apply bg-gray-900 border border-gray-800 rounded-lg p-6;
+}
+
+.card-header {
+  @apply text-lg font-bold text-white mb-4 pb-4 border-b border-gray-800;
+}
+
+.card-body {
+  @apply space-y-4;
+}
+
+/* Form group styling */
+.form-group {
+  @apply flex flex-col gap-2;
+}
+
+.form-label {
+  @apply text-sm font-medium text-gray-300;
+}
+
+.form-error {
+  @apply text-red-400 text-sm mt-1;
+}
+
+.form-hint {
+  @apply text-xs text-gray-500 mt-1;
+}
+
+/* Table styling */
+table {
+  @apply w-full border-collapse;
+}
+
+th {
+  @apply bg-gray-900 border border-gray-800 px-4 py-2 text-left font-bold text-white;
+}
+
+td {
+  @apply border border-gray-800 px-4 py-2 text-gray-300;
+}
+
+tr:hover {
+  @apply bg-gray-850;
+}
+
+/* Loading spinner */
+.spinner {
+  @apply inline-block animate-spin;
+}
+
+/* Badge styling */
+.badge {
+  @apply inline-block px-2 py-1 rounded-full text-xs font-medium;
+}
+
+.badge-primary {
+  @apply bg-neon-green text-black;
+}
+
+.badge-success {
+  @apply bg-neon-green text-black;
+}
+
+.badge-warning {
+  @apply bg-yellow-700 text-yellow-100;
+}
+
+.badge-danger {
+  @apply bg-red-700 text-red-100;
+}
+
+/* Responsive utilities */
+@layer components {
+  .container-narrow {
+    @apply max-w-4xl mx-auto;
+  }
+
+  .grid-responsive {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+  }
+
+  .grid-2col {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-6;
+  }
+
+  .flex-between {
+    @apply flex items-center justify-between;
+  }
+
+  .text-muted {
+    @apply text-gray-500;
+  }
+
+  /* Neon glow effect */
+  .glow-neon {
+    @apply text-neon-green shadow-lg shadow-neon-green/20;
+  }
+
+  /* Card with neon accent */
+  .card-accent {
+    @apply bg-gray-900 border border-gray-800 rounded-lg p-6 hover:border-neon-green/30 transition-all;
+  }
+}
+
+/* Gradient backgrounds */
+.gradient-primary {
+  background: linear-gradient(135deg, #00ff41 0%, #00d9ff 100%);
+}
+
+.gradient-chart {
+  background: linear-gradient(180deg, #00ff41 0%, transparent 100%);
+}
