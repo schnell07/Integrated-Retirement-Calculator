@@ -35,7 +35,7 @@ jobs:
     name: Deploy (Netlify, optional)
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && (secrets.NETLIFY_AUTH_TOKEN != '' || secrets.VERCEL_TOKEN != '')
+    if: ${{ github.ref == 'refs/heads/main' && (secrets.NETLIFY_AUTH_TOKEN != '' || secrets.VERCEL_TOKEN != '') }}
     steps:
       - uses: actions/checkout@v4
 
@@ -43,7 +43,7 @@ jobs:
         run: npm install -g netlify-cli
 
       - name: Deploy to Netlify (if configured)
-        if: secrets.NETLIFY_AUTH_TOKEN != ''
+        if: ${{ secrets.NETLIFY_AUTH_TOKEN != '' }}
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
@@ -51,7 +51,7 @@ jobs:
           netlify deploy --dir=dist --prod --site=$NETLIFY_SITE_ID --auth=$NETLIFY_AUTH_TOKEN
 
       - name: Deploy to Vercel (if configured)
-        if: secrets.VERCEL_TOKEN != ''
+        if: ${{ secrets.VERCEL_TOKEN != '' }}
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
@@ -63,7 +63,7 @@ jobs:
     name: Post-deploy smoke test (optional)
     needs: deploy
     runs-on: ubuntu-latest
-    if: secrets.DEPLOY_URL != ''
+    if: ${{ secrets.DEPLOY_URL != '' }}
     steps:
       - name: Wait for site warmup
         run: sleep 10
@@ -83,7 +83,7 @@ jobs:
     name: Integration Tests (Playwright)
     needs: deploy
     runs-on: ubuntu-latest
-    if: secrets.DEPLOY_URL != ''
+    if: ${{ secrets.DEPLOY_URL != '' }}
     steps:
       - uses: actions/checkout@v4
 
