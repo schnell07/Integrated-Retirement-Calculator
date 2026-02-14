@@ -14,8 +14,8 @@ export default defineConfig({
   /* Run tests in all files */
   testMatch: '**/*.test.ts',
 
-  /* Run your local dev server before starting the tests */
-  webServer: {
+  /* Run your local dev server before starting the tests (only if DEPLOY_URL is not set) */
+  webServer: process.env.DEPLOY_URL ? undefined : {
     command: 'npm run dev',
     url: 'http://localhost:5176',
     reuseExistingServer: !process.env.CI,
