@@ -17,38 +17,47 @@ const originalError = console.error;
 
 console.log = (...args: any[]) => {
   originalLog(...args);
-  const message = args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ');
+  const message = args.map(a => typeof a === 'string' ? a : String(a)).join(' ');
   logCache.push({
     timestamp: new Date().toLocaleTimeString(),
     level: 'log',
     message,
   });
   if (logCache.length > 100) logCache.shift();
-  logListeners.forEach(listener => listener());
+  // Batch listener calls with microtask to prevent render storms
+  Promise.resolve().then(() => {
+    logListeners.forEach(listener => listener());
+  });
 };
 
 console.warn = (...args: any[]) => {
   originalWarn(...args);
-  const message = args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ');
+  const message = args.map(a => typeof a === 'string' ? a : String(a)).join(' ');
   logCache.push({
     timestamp: new Date().toLocaleTimeString(),
     level: 'warn',
     message,
   });
   if (logCache.length > 100) logCache.shift();
-  logListeners.forEach(listener => listener());
+  // Batch listener calls with microtask to prevent render storms
+  Promise.resolve().then(() => {
+    logListeners.forEach(listener => listener());
+  });
 };
 
 console.error = (...args: any[]) => {
   originalError(...args);
-  const message = args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ');
+  const message = args.map(a => typeof a === 'string' ? a : String(a)).join(' ');
   logCache.push({
     timestamp: new Date().toLocaleTimeString(),
     level: 'error',
     message,
   });
   if (logCache.length > 100) logCache.shift();
-  logListeners.forEach(listener => listener());
+  // Batch listener calls with microtask to prevent render storms
+  Promise.resolve().then(() => {
+    logListeners.forEach(listener => listener());
+  });
 };
 
 export function DebugConsole() {
