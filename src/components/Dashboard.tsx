@@ -43,19 +43,22 @@ export default function Dashboard({ data, projectionSummary }: DashboardProps) {
     // Memoize all data transformations to prevent infinite re-renders
     const { scale, chartData, accountBreakdown } = useMemo(() => {
       try {
-        // Determine display scale automatically (raw / thousands / millions)
+        if (!projectionSummary?.projections || projectionSummary.projections.length === 0) {
+          return { scale: { divisor: 1, suffix: '' }, chartData: [], accountBreakdown: [] };
+        }
+
         const maxVal = Math.max(...projectionSummary.projections.map(p => Math.max(p.portfolioValueAfter || 0, p.portfolioValueAfterLowerLimit || 0, p.portfolioValueAfterUpperLimit || 0)));
         
         if (!Number.isFinite(maxVal) || maxVal < 0) {
-          throw new Error('Invalid portfolio values detected');
+          return { scale: { divisor: 1, suffix: '' }, chartData: [], accountBreakdown: [] };
         }
 
         const calculatedScale = maxVal >= 1_000_000 ? { divisor: 1_000_000, suffix: 'M' } : 
                                 maxVal >= 1_000 ? { divisor: 1_000, suffix: 'k' } : 
                                 { divisor: 1, suffix: '' };
 
-        // Prepare chart data - show first 30 years
-        const calculatedChartData = projectionSummary.projections.slice(0, 30).map(proj => ({
+        const chartDataLimit = Math.min(30, projectionSummary.projections.length);
+        const calculatedChartData = projectionSummary.projections.slice(0, chartDataLimit).map(proj => ({
           year: proj.year,
           portfolio: +(proj.portfolioValueAfter / calculatedScale.divisor).toFixed(2),
           lowerLimit: +(proj.portfolioValueAfterLowerLimit / calculatedScale.divisor).toFixed(2),
@@ -65,8 +68,7 @@ export default function Dashboard({ data, projectionSummary }: DashboardProps) {
           income: +(proj.totalIncome / calculatedScale.divisor).toFixed(2),
         }));
 
-        // Account breakdown for pie chart
-        const calculatedAccountBreakdown = data.accounts.map(acc => ({
+        const calculatedAccountBreakdown = (data.accounts || []).map(acc => ({
           name: acc.name,
           value: acc.currentValue,
         }));
@@ -74,7 +76,7 @@ export default function Dashboard({ data, projectionSummary }: DashboardProps) {
         return { scale: calculatedScale, chartData: calculatedChartData, accountBreakdown: calculatedAccountBreakdown };
       } catch (err) {
         console.error('Error in Dashboard memoization:', err);
-        throw err;
+        return { scale: { divisor: 1, suffix: '' }, chartData: [], accountBreakdown: [] };
       }
     }, [projectionSummary, data.accounts]);
 

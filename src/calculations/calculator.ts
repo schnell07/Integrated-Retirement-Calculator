@@ -20,8 +20,11 @@ export class RetirementCalculator {
 
   /**
    * Main calculation method - generates complete projection to life expectancy
+   * Includes safeguards against infinite loops and stack overflow
    */
   calculate(): ProjectionSummary {
+    const MAX_ITERATIONS = 150;
+    
     try {
       const projections: AnnualProjection[] = [];
       
@@ -75,12 +78,13 @@ export class RetirementCalculator {
     let portfolioValueUpperLimit = portfolioValue;
     let accountBalances: Record<string, number> = {};
     
-    // Initialize account balances
     this.data.accounts.forEach(account => {
       accountBalances[account.id] = account.currentValue;
     });
 
-    for (let year = currentYear; year <= latestDeathYear; year++) {
+    const actualEndYear = Math.min(latestDeathYear, currentYear + MAX_ITERATIONS);
+    
+    for (let year = currentYear; year <= actualEndYear; year++) {
       const userAge = year - userBirthYear;
       const spouseAge = spouseBirthYear ? year - spouseBirthYear : undefined;
 
@@ -157,11 +161,12 @@ export class RetirementCalculator {
         investmentGrowthLower = portfolioValueLowerLimit * this.data.financialInputs.growthRateLowerLimit;
         investmentGrowthUpper = portfolioValueUpperLimit * this.data.financialInputs.growthRateUpperLimit;
 
-        // Calculate required minimum distributions for eligible account holders 72+ years old
         rmd = this.calculateRMD(portfolioValue, userAge, spouseAge);
+        if (!Number.isFinite(rmd)) rmd = 0;
 
-        // Calculate withdrawals (max of expenses - income, or more if needed)
-        withdrawals = Math.max(0, annualExpenses - incomeUser - incomeSpouse, rmd);
+        const requiredWithdrawals = annualExpenses - incomeUser - incomeSpouse;
+        withdrawals = Math.max(0, requiredWithdrawals, rmd);
+        if (!Number.isFinite(withdrawals)) withdrawals = 0;
       }
 
       portfolioValue = portfolioValue + contributions + investmentGrowth - withdrawals;

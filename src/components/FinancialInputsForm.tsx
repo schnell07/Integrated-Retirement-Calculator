@@ -15,21 +15,18 @@ export default function FinancialInputsForm({ data, onUpdate }: FinancialInputsF
     const numValue = Number(value);
     
     // Validate growth rate fields to prevent infinite loops
-    // Growth rates should be between -50% and +50% when displayed
     if (field === 'growthRateLowerLimit' || field === 'growthRateUpperLimit' || 
         field === 'investmentGrowthPreRetirement' || field === 'investmentGrowthPostRetirement') {
+      // When user enters percentages (e.g., 7 for 7%), validate they're between -50 and +50
       if (numValue < -50 || numValue > 50) {
-        console.warn(`${field} must be between -50% and 50%`);
-        return; // Ignore invalid input
+        return; // Ignore invalid input silently
       }
       
-      // Ensure lower limit is not greater than upper limit (both as percentages)
-      if (field === 'growthRateLowerLimit' && numValue > financialInputs.growthRateUpperLimit * 100) {
-        console.warn('Lower limit growth rate cannot exceed upper limit');
+      // Ensure lower limit is not greater than upper limit
+      if (field === 'growthRateLowerLimit' && numValue > (financialInputs.growthRateUpperLimit * 100)) {
         return;
       }
-      if (field === 'growthRateUpperLimit' && numValue < financialInputs.growthRateLowerLimit * 100) {
-        console.warn('Upper limit growth rate cannot be less than lower limit');
+      if (field === 'growthRateUpperLimit' && numValue < (financialInputs.growthRateLowerLimit * 100)) {
         return;
       }
     }

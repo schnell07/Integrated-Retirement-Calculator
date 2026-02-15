@@ -239,7 +239,7 @@ export default function ProjectionCharts({ data, projectionSummary }: Projection
               </tr>
             </thead>
             <tbody>
-              {projections.slice(0, 20).map((p, idx) => (
+              {projections.slice(0, Math.min(20, projections.length)).map((p, idx) => (
                 <tr key={idx} className={idx % 2 === 0 ? 'bg-navy-800/30' : ''}>
                   <td className="px-4 py-3">{p.year}</td>
                   <td className="px-4 py-3 text-right">{p.age.user}</td>

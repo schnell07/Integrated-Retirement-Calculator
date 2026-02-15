@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { RetirementAccount } from '../types';
 import { Plus, Trash2, Edit2 } from 'lucide-react';
 
@@ -110,8 +110,14 @@ export default function AccountsManagement({
     });
   };
 
-  const totalValue = accounts.reduce((sum, acc) => sum + acc.currentValue, 0);
-  const totalContributions = accounts.reduce((sum, acc) => sum + acc.annualContribution, 0);
+  const { totalValue, totalContributions, averageGrowthRate } = useMemo(() => {
+    const total = accounts.reduce((sum, acc) => sum + acc.currentValue, 0);
+    const contributions = accounts.reduce((sum, acc) => sum + acc.annualContribution, 0);
+    const avgGrowth = accounts.length > 0 
+      ? (accounts.reduce((sum, acc) => sum + acc.growthRate, 0) / accounts.length) * 100
+      : 0;
+    return { totalValue: total, totalContributions: contributions, averageGrowthRate: avgGrowth };
+  }, [accounts]);
 
   return (
     <div className="p-8 space-y-8">
@@ -140,9 +146,7 @@ export default function AccountsManagement({
         <div className="card">
           <div className="card-header text-base">Average Growth Rate</div>
           <div className="text-3xl font-bold text-navy-100">
-            {(
-              accounts.reduce((sum, acc) => sum + acc.growthRate, 0) / accounts.length * 100
-            ).toFixed(1)}%
+            {averageGrowthRate.toFixed(1)}%
           </div>
           <p className="text-sm text-navy-400 mt-2">
             Weighted average

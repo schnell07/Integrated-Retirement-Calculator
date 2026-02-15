@@ -64,12 +64,20 @@ export function DebugConsole() {
   const [isOpen, setIsOpen] = useState(false);
   const [, setUpdate] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const listenerRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    const listener = () => setUpdate(prev => prev + 1);
-    logListeners.push(listener);
+    if (!listenerRef.current) {
+      const listener = () => setUpdate(prev => prev + 1);
+      listenerRef.current = listener;
+      logListeners.push(listener);
+    }
+    
     return () => {
-      logListeners = logListeners.filter(l => l !== listener);
+      if (listenerRef.current) {
+        logListeners = logListeners.filter(l => l !== listenerRef.current);
+        listenerRef.current = null;
+      }
     };
   }, []);
 
