@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { PortfolioSnapshot } from '../types';
 import { Plus, Trash2, TrendingUp } from 'lucide-react';
 
@@ -39,7 +39,9 @@ export default function PortfolioTracking({ snapshots }: PortfolioTrackingProps)
     });
   };
 
-  const sortedSnapshots = [...snapshots].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const sortedSnapshots = useMemo(() => {
+    return [...snapshots].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [snapshots]);
 
   return (
     <div className="p-8 space-y-8">
@@ -170,7 +172,7 @@ export default function PortfolioTracking({ snapshots }: PortfolioTrackingProps)
                       ${snapshot.totalValue.toLocaleString()}
                     </h4>
                     <p className="text-sm text-navy-400 mt-1">
-                      {new Date(snapshot.totalValue).toLocaleDateString()}
+                      {new Date(snapshot.date).toLocaleDateString()}
                     </p>
                     {snapshot.notes && (
                       <p className="text-sm text-navy-300 mt-2">{snapshot.notes}</p>

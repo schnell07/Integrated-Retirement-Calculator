@@ -17,31 +17,20 @@ export const useRetirementCalculator = () => {
   useEffect(() => {
     const initializeData = async () => {
       try {
-        console.info('🔄 Initializing retirement calculator...');
         await db.init();
-        console.info('✅ Database initialized');
         
         let savedData = await db.getData();
-        console.info('📦 Data from DB:', savedData ? 'Found' : 'Not found');
         
         if (!savedData) {
           // Load default data if available
           const autosavedData = localStorageService.getKey<RetirementCalculatorData>(AUTOSAVE_KEY);
-          console.info('💾 Autosaved data:', autosavedData ? 'Found' : 'Not found');
           if (autosavedData) {
             savedData = autosavedData;
           } else {
             // Create initial default data
-            console.info('🆕 Creating new default data');
             savedData = useRetirementCalculatorInitial();
           }
         }
-        
-        console.info('✅ Data loaded:', {
-          household: savedData?.household,
-          accountsCount: savedData?.accounts?.length,
-          incomeSourcesCount: (savedData?.incomeSourcesUser?.length || 0) + (savedData?.incomeSourcesSpouse?.length || 0),
-        });
         
         // Sanitize all numeric fields to ensure they're in valid ranges
         if (savedData.household?.user) {
@@ -51,19 +40,16 @@ export const useRetirementCalculator = () => {
           // Validate and fix birth year (should be 1900-2025)
           if (!user.birthYear || user.birthYear < 1900 || user.birthYear > currentYear) {
             user.birthYear = 1970;
-            console.warn('⚠️ Invalid birth year detected, resetting to 1970');
           }
           
           // Validate and fix retirement age (should be 50-85)
           if (user.retirementAge < 50 || user.retirementAge > 85) {
             user.retirementAge = 65;
-            console.warn('⚠️ Invalid retirement age detected, resetting to 65');
           }
           
           // Validate and fix life expectancy age (should be 70-120)
           if (user.lifeExpectancyAge < 70 || user.lifeExpectancyAge > 120) {
             user.lifeExpectancyAge = 90;
-            console.warn('⚠️ Invalid life expectancy age detected, resetting to 90');
           }
         }
         
@@ -74,17 +60,14 @@ export const useRetirementCalculator = () => {
           
           if (!spouse.birthYear || spouse.birthYear < 1900 || spouse.birthYear > currentYear) {
             spouse.birthYear = 1975;
-            console.warn('⚠️ Invalid spouse birth year detected, resetting to 1975');
           }
           
           if (spouse.retirementAge < 50 || spouse.retirementAge > 85) {
             spouse.retirementAge = 65;
-            console.warn('⚠️ Invalid spouse retirement age detected, resetting to 65');
           }
           
           if (spouse.lifeExpectancyAge < 70 || spouse.lifeExpectancyAge > 120) {
             spouse.lifeExpectancyAge = 92;
-            console.warn('⚠️ Invalid spouse life expectancy age detected, resetting to 92');
           }
         }
         
@@ -93,7 +76,6 @@ export const useRetirementCalculator = () => {
           savedData.accounts.forEach(acc => {
             if (acc.currentValue < 0 || !Number.isFinite(acc.currentValue)) {
               acc.currentValue = 0;
-              console.warn('⚠️ Invalid account value detected, resetting to 0');
             }
             if (acc.annualContribution < 0 || !Number.isFinite(acc.annualContribution)) {
               acc.annualContribution = 0;
@@ -136,7 +118,6 @@ export const useRetirementCalculator = () => {
           if (sanitized.growthRateLowerLimit < -0.5 || sanitized.growthRateLowerLimit > 0.5 || 
               sanitized.growthRateUpperLimit < -0.5 || sanitized.growthRateUpperLimit > 0.5 ||
               sanitized.growthRateLowerLimit > sanitized.growthRateUpperLimit) {
-            console.warn('⚠️ Invalid growth rates detected in saved data, resetting to defaults');
             sanitized.growthRateLowerLimit = 0.03;
             sanitized.growthRateUpperLimit = 0.10;
             savedData = { ...savedData, financialInputs: sanitized };
@@ -146,9 +127,8 @@ export const useRetirementCalculator = () => {
         setData(savedData);
         setError(null);
       } catch (err) {
-        console.error('❌ Failed to initialize database:', err);
+        console.error('Failed to initialize database:', err);
         // Set default data on error
-        console.info('⚠️ Using fallback default data');
         setData(useRetirementCalculatorInitial());
         setError(`Failed to load data: ${err instanceof Error ? err.message : 'Unknown error'}`);
       } finally {
@@ -167,50 +147,39 @@ export const useRetirementCalculator = () => {
       try {
         // Validate data before calculating
         if (!data.household || !data.accounts) {
-          console.warn('⚠️ Invalid data structure, skipping calculation', { household: !!data.household, accounts: !!data.accounts });
           return;
         }
 
         // Save to IndexedDB
         try {
-          console.info('💾 Saving to IndexedDB...');
           await db.saveData(data);
-          console.info('✅ Saved to IndexedDB');
         } catch (saveErr) {
-          console.warn('⚠️ Failed to save to IndexedDB:', saveErr);
+          console.error('Failed to save to IndexedDB:', saveErr);
         }
         
         // Backup to localStorage
         try {
-          console.info('💾 Saving to localStorage...');
           localStorageService.saveKey(AUTOSAVE_KEY, data);
-          console.info('✅ Saved to localStorage');
         } catch (localErr) {
-          console.warn('⚠️ Failed to save to localStorage:', localErr);
+          console.error('Failed to save to localStorage:', localErr);
         }
 
         // Recalculate projections
         try {
-          console.info('🧮 Starting calculation...');
           const calculator = new RetirementCalculator(data);
-          console.info('📊 Calculator created, calling calculate()');
           const summary = calculator.calculate();
-          console.info('✅ Calculation complete:', {
-            years: summary.projections.length,
-            endingPortfolioValue: summary.finalPortfolioValue,
-          });
           setProjectionSummary(summary);
           setError(null); // Clear any previous errors
           setShouldSkipCalculation(false);
         } catch (calcErr) {
           const errorMsg = calcErr instanceof Error ? calcErr.message : 'Unknown error';
-          console.error('❌ Calculation error:', calcErr, { message: errorMsg });
+          console.error('Calculation error:', errorMsg);
           setError(`Calculation failed: ${errorMsg}`);
           // Don't skip calculation - allow retry on data change
         }
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-        console.error('❌ Failed to save or calculate:', err);
+        console.error('Failed to save or calculate:', err);
         setError(`Error: ${errorMsg}`);
       }
     }, 500); // Debounce calculations
