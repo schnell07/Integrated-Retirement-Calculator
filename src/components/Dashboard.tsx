@@ -14,6 +14,8 @@ interface DashboardProps {
   projectionSummary: ProjectionSummary | null;
 }
 
+const PIE_COLORS = ['#00ff41', '#00d9ff', '#d946ef', '#fbbf24', '#fb7185', '#60a5fa', '#34d399'];
+
 export default function Dashboard({ data, projectionSummary }: DashboardProps) {
   if (!projectionSummary) {
     return (
@@ -37,32 +39,33 @@ export default function Dashboard({ data, projectionSummary }: DashboardProps) {
   const goalAmount = data.financialInputs.savingsGoal;
   const goalProgress = (currentPortfolioValue / goalAmount) * 100;
 
-  // Determine display scale automatically (raw / thousands / millions)
-  const maxVal = Math.max(...projectionSummary.projections.map(p => Math.max(p.portfolioValueAfter || 0, p.portfolioValueAfterLowerLimit || 0, p.portfolioValueAfterUpperLimit || 0)));
-  const scale = useMemo(() => {
-    if (maxVal >= 1_000_000) return { divisor: 1_000_000, suffix: 'M' };
-    if (maxVal >= 1_000) return { divisor: 1_000, suffix: 'k' };
-    return { divisor: 1, suffix: '' };
-  }, [maxVal]);
+  // Memoize all data transformations to prevent infinite re-renders
+  const { scale, chartData, accountBreakdown } = useMemo(() => {
+    // Determine display scale automatically (raw / thousands / millions)
+    const maxVal = Math.max(...projectionSummary.projections.map(p => Math.max(p.portfolioValueAfter || 0, p.portfolioValueAfterLowerLimit || 0, p.portfolioValueAfterUpperLimit || 0)));
+    const calculatedScale = maxVal >= 1_000_000 ? { divisor: 1_000_000, suffix: 'M' } : 
+                            maxVal >= 1_000 ? { divisor: 1_000, suffix: 'k' } : 
+                            { divisor: 1, suffix: '' };
 
-  // Prepare chart data - show first 30 years
-  const chartData = projectionSummary.projections.slice(0, 30).map(proj => ({
-    year: proj.year,
-    portfolio: +(proj.portfolioValueAfter / scale.divisor).toFixed(2),
-    lowerLimit: +(proj.portfolioValueAfterLowerLimit / scale.divisor).toFixed(2),
-    upperLimit: +(proj.portfolioValueAfterUpperLimit / scale.divisor).toFixed(2),
-    withdrawals: +(proj.withdrawals / scale.divisor).toFixed(2),
-    contributions: +(proj.contributions / scale.divisor).toFixed(2),
-    income: +(proj.totalIncome / scale.divisor).toFixed(2),
-  }));
+    // Prepare chart data - show first 30 years
+    const calculatedChartData = projectionSummary.projections.slice(0, 30).map(proj => ({
+      year: proj.year,
+      portfolio: +(proj.portfolioValueAfter / calculatedScale.divisor).toFixed(2),
+      lowerLimit: +(proj.portfolioValueAfterLowerLimit / calculatedScale.divisor).toFixed(2),
+      upperLimit: +(proj.portfolioValueAfterUpperLimit / calculatedScale.divisor).toFixed(2),
+      withdrawals: +(proj.withdrawals / calculatedScale.divisor).toFixed(2),
+      contributions: +(proj.contributions / calculatedScale.divisor).toFixed(2),
+      income: +(proj.totalIncome / calculatedScale.divisor).toFixed(2),
+    }));
 
-  // Account breakdown for pie chart
-  const accountBreakdown = data.accounts.map(acc => ({
-    name: acc.name,
-    value: acc.currentValue,
-  }));
+    // Account breakdown for pie chart
+    const calculatedAccountBreakdown = data.accounts.map(acc => ({
+      name: acc.name,
+      value: acc.currentValue,
+    }));
 
-  const pieColors = ['#00ff41', '#00d9ff', '#d946ef', '#fbbf24', '#fb7185', '#60a5fa', '#34d399'];
+    return { scale: calculatedScale, chartData: calculatedChartData, accountBreakdown: calculatedAccountBreakdown };
+  }, [projectionSummary, data.accounts]);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -326,7 +329,7 @@ export default function Dashboard({ data, projectionSummary }: DashboardProps) {
                   label={({ value }: any) => `${((value / accountBreakdown.reduce((sum, acc) => sum + acc.value, 0)) * 100).toFixed(0)}%`}
                 >
                   {accountBreakdown.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
+                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip

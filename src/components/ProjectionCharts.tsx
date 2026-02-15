@@ -1,4 +1,5 @@
 import { RetirementCalculatorData, ProjectionSummary } from '../types';
+import { useMemo } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
 
 interface ProjectionChartsProps {
@@ -19,35 +20,40 @@ export default function ProjectionCharts({ data, projectionSummary }: Projection
 
   const projections = projectionSummary.projections;
 
-  // Prepare chart data
+  // Memoize all chart data transformations to prevent infinite re-renders
+  const { portfolioData, cashFlowData, incomeData, firstProjection, lastProjection, goalYear } = useMemo(() => {
+    // Portfolio growth trajectory data
+    const portfolioTransformed = projections.map(p => ({
+      year: p.year,
+      value: Math.round(p.portfolioValueAfter),
+      projectedGoal: Math.round(data.financialInputs.savingsGoal),
+    }));
 
+    // Cash flow data
+    const cashFlowTransformed = projections.map(p => ({
+      year: p.year,
+      contributions: Math.round(p.contributions),
+      growth: Math.round(p.investmentGrowth),
+      withdrawals: Math.round(p.withdrawals),
+    }));
 
-  // Portfolio growth trajectory data
-  const portfolioData = projections.map(p => ({
-    year: p.year,
-    value: Math.round(p.portfolioValueAfter),
-    projectedGoal: Math.round(data.financialInputs.savingsGoal),
-  }));
+    // Income timeline
+    const incomeTransformed = projections.map(p => ({
+      year: p.year,
+      userIncome: Math.round(p.incomeUser),
+      spouseIncome: Math.round(p.incomeSpouse),
+      total: Math.round(p.totalIncome),
+    }));
 
-  // Cash flow data
-  const cashFlowData = projections.map(p => ({
-    year: p.year,
-    contributions: Math.round(p.contributions),
-    growth: Math.round(p.investmentGrowth),
-    withdrawals: Math.round(p.withdrawals),
-  }));
-
-  // Income timeline
-  const incomeData = projections.map(p => ({
-    year: p.year,
-    userIncome: Math.round(p.incomeUser),
-    spouseIncome: Math.round(p.incomeSpouse),
-    total: Math.round(p.totalIncome),
-  }));
-
-  const firstProjection = projections[0];
-  const lastProjection = projections[projections.length - 1];
-  const goalYear = projectionSummary.goalAchievingYear;
+    return {
+      portfolioData: portfolioTransformed,
+      cashFlowData: cashFlowTransformed,
+      incomeData: incomeTransformed,
+      firstProjection: projections[0],
+      lastProjection: projections[projections.length - 1],
+      goalYear: projectionSummary.goalAchievingYear,
+    };
+  }, [projections, data.financialInputs.savingsGoal, projectionSummary.goalAchievingYear]);
 
   return (
     <div className="p-8 space-y-8">
