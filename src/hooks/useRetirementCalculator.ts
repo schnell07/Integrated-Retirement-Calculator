@@ -43,6 +43,93 @@ export const useRetirementCalculator = () => {
           incomeSourcesCount: (savedData?.incomeSourcesUser?.length || 0) + (savedData?.incomeSourcesSpouse?.length || 0),
         });
         
+        // Sanitize all numeric fields to ensure they're in valid ranges
+        if (savedData.household?.user) {
+          const user = savedData.household.user;
+          const currentYear = new Date().getFullYear();
+          
+          // Validate and fix birth year (should be 1900-2025)
+          if (!user.birthYear || user.birthYear < 1900 || user.birthYear > currentYear) {
+            user.birthYear = 1970;
+            console.warn('⚠️ Invalid birth year detected, resetting to 1970');
+          }
+          
+          // Validate and fix retirement age (should be 50-85)
+          if (user.retirementAge < 50 || user.retirementAge > 85) {
+            user.retirementAge = 65;
+            console.warn('⚠️ Invalid retirement age detected, resetting to 65');
+          }
+          
+          // Validate and fix life expectancy age (should be 70-120)
+          if (user.lifeExpectancyAge < 70 || user.lifeExpectancyAge > 120) {
+            user.lifeExpectancyAge = 90;
+            console.warn('⚠️ Invalid life expectancy age detected, resetting to 90');
+          }
+        }
+        
+        // Same for spouse if exists
+        if (savedData.household?.spouse) {
+          const spouse = savedData.household.spouse;
+          const currentYear = new Date().getFullYear();
+          
+          if (!spouse.birthYear || spouse.birthYear < 1900 || spouse.birthYear > currentYear) {
+            spouse.birthYear = 1975;
+            console.warn('⚠️ Invalid spouse birth year detected, resetting to 1975');
+          }
+          
+          if (spouse.retirementAge < 50 || spouse.retirementAge > 85) {
+            spouse.retirementAge = 65;
+            console.warn('⚠️ Invalid spouse retirement age detected, resetting to 65');
+          }
+          
+          if (spouse.lifeExpectancyAge < 70 || spouse.lifeExpectancyAge > 120) {
+            spouse.lifeExpectancyAge = 92;
+            console.warn('⚠️ Invalid spouse life expectancy age detected, resetting to 92');
+          }
+        }
+        
+        // Sanitize account values
+        if (savedData.accounts) {
+          savedData.accounts.forEach(acc => {
+            if (acc.currentValue < 0 || !Number.isFinite(acc.currentValue)) {
+              acc.currentValue = 0;
+              console.warn('⚠️ Invalid account value detected, resetting to 0');
+            }
+            if (acc.annualContribution < 0 || !Number.isFinite(acc.annualContribution)) {
+              acc.annualContribution = 0;
+            }
+            if (acc.employerMatch < 0 || acc.employerMatch > 1) {
+              acc.employerMatch = 0.05;
+            }
+            if (acc.employerMatchCap < 0 || !Number.isFinite(acc.employerMatchCap)) {
+              acc.employerMatchCap = 0;
+            }
+          });
+        }
+        
+        // Sanitize income sources
+        if (savedData.incomeSourcesUser) {
+          savedData.incomeSourcesUser.forEach(src => {
+            if (src.annualAmount < 0 || !Number.isFinite(src.annualAmount)) {
+              src.annualAmount = 0;
+            }
+            if (src.growthRate < -0.5 || src.growthRate > 0.5) {
+              src.growthRate = 0.03;
+            }
+          });
+        }
+        
+        if (savedData.incomeSourcesSpouse) {
+          savedData.incomeSourcesSpouse.forEach(src => {
+            if (src.annualAmount < 0 || !Number.isFinite(src.annualAmount)) {
+              src.annualAmount = 0;
+            }
+            if (src.growthRate < -0.5 || src.growthRate > 0.5) {
+              src.growthRate = 0.03;
+            }
+          });
+        }
+        
         // Sanitize growth rates to ensure they're within valid bounds
         if (savedData.financialInputs) {
           const sanitized = { ...savedData.financialInputs };
