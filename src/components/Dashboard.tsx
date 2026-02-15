@@ -17,7 +17,7 @@ interface DashboardProps {
 const PIE_COLORS = ['#00ff41', '#00d9ff', '#d946ef', '#fbbf24', '#fb7185', '#60a5fa', '#34d399'];
 
 export default function Dashboard({ data, projectionSummary }: DashboardProps) {
-  if (!projectionSummary) {
+  if (!projectionSummary || !projectionSummary.projections || projectionSummary.projections.length === 0) {
     return (
       <div className="p-8">
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-8 text-center">
@@ -27,47 +27,58 @@ export default function Dashboard({ data, projectionSummary }: DashboardProps) {
     );
   }
 
-  const user = data.household.user;
-  const currentYear = data.household.currentYear;
-  const userAge = currentYear - user.birthYear;
-  const retirementYear = user.birthYear + user.retirementAge;
-  const yearsToRetirement = user.retirementAge - userAge;
-  const lifeExpectancyYear = user.birthYear + user.lifeExpectancyAge;
+  try {
+    const user = data.household.user;
+    const currentYear = data.household.currentYear;
+    const userAge = currentYear - user.birthYear;
+    const retirementYear = user.birthYear + user.retirementAge;
+    const yearsToRetirement = user.retirementAge - userAge;
+    const lifeExpectancyYear = user.birthYear + user.lifeExpectancyAge;
 
-  const currentPortfolioValue = projectionSummary.projections[0]?.portfolioValueAfter || 0;
-  const finalPortfolioValue = projectionSummary.finalPortfolioValue;
-  const goalAmount = data.financialInputs.savingsGoal;
-  const goalProgress = (currentPortfolioValue / goalAmount) * 100;
+    const currentPortfolioValue = projectionSummary.projections[0]?.portfolioValueAfter || 0;
+    const finalPortfolioValue = projectionSummary.finalPortfolioValue;
+    const goalAmount = data.financialInputs.savingsGoal;
+    const goalProgress = (currentPortfolioValue / goalAmount) * 100;
 
-  // Memoize all data transformations to prevent infinite re-renders
-  const { scale, chartData, accountBreakdown } = useMemo(() => {
-    // Determine display scale automatically (raw / thousands / millions)
-    const maxVal = Math.max(...projectionSummary.projections.map(p => Math.max(p.portfolioValueAfter || 0, p.portfolioValueAfterLowerLimit || 0, p.portfolioValueAfterUpperLimit || 0)));
-    const calculatedScale = maxVal >= 1_000_000 ? { divisor: 1_000_000, suffix: 'M' } : 
-                            maxVal >= 1_000 ? { divisor: 1_000, suffix: 'k' } : 
-                            { divisor: 1, suffix: '' };
+    // Memoize all data transformations to prevent infinite re-renders
+    const { scale, chartData, accountBreakdown } = useMemo(() => {
+      try {
+        // Determine display scale automatically (raw / thousands / millions)
+        const maxVal = Math.max(...projectionSummary.projections.map(p => Math.max(p.portfolioValueAfter || 0, p.portfolioValueAfterLowerLimit || 0, p.portfolioValueAfterUpperLimit || 0)));
+        
+        if (!Number.isFinite(maxVal) || maxVal < 0) {
+          throw new Error('Invalid portfolio values detected');
+        }
 
-    // Prepare chart data - show first 30 years
-    const calculatedChartData = projectionSummary.projections.slice(0, 30).map(proj => ({
-      year: proj.year,
-      portfolio: +(proj.portfolioValueAfter / calculatedScale.divisor).toFixed(2),
-      lowerLimit: +(proj.portfolioValueAfterLowerLimit / calculatedScale.divisor).toFixed(2),
-      upperLimit: +(proj.portfolioValueAfterUpperLimit / calculatedScale.divisor).toFixed(2),
-      withdrawals: +(proj.withdrawals / calculatedScale.divisor).toFixed(2),
-      contributions: +(proj.contributions / calculatedScale.divisor).toFixed(2),
-      income: +(proj.totalIncome / calculatedScale.divisor).toFixed(2),
-    }));
+        const calculatedScale = maxVal >= 1_000_000 ? { divisor: 1_000_000, suffix: 'M' } : 
+                                maxVal >= 1_000 ? { divisor: 1_000, suffix: 'k' } : 
+                                { divisor: 1, suffix: '' };
 
-    // Account breakdown for pie chart
-    const calculatedAccountBreakdown = data.accounts.map(acc => ({
-      name: acc.name,
-      value: acc.currentValue,
-    }));
+        // Prepare chart data - show first 30 years
+        const calculatedChartData = projectionSummary.projections.slice(0, 30).map(proj => ({
+          year: proj.year,
+          portfolio: +(proj.portfolioValueAfter / calculatedScale.divisor).toFixed(2),
+          lowerLimit: +(proj.portfolioValueAfterLowerLimit / calculatedScale.divisor).toFixed(2),
+          upperLimit: +(proj.portfolioValueAfterUpperLimit / calculatedScale.divisor).toFixed(2),
+          withdrawals: +(proj.withdrawals / calculatedScale.divisor).toFixed(2),
+          contributions: +(proj.contributions / calculatedScale.divisor).toFixed(2),
+          income: +(proj.totalIncome / calculatedScale.divisor).toFixed(2),
+        }));
 
-    return { scale: calculatedScale, chartData: calculatedChartData, accountBreakdown: calculatedAccountBreakdown };
-  }, [projectionSummary, data.accounts]);
+        // Account breakdown for pie chart
+        const calculatedAccountBreakdown = data.accounts.map(acc => ({
+          name: acc.name,
+          value: acc.currentValue,
+        }));
 
-  const containerRef = useRef<HTMLDivElement | null>(null);
+        return { scale: calculatedScale, chartData: calculatedChartData, accountBreakdown: calculatedAccountBreakdown };
+      } catch (err) {
+        console.error('Error in Dashboard memoization:', err);
+        throw err;
+      }
+    }, [projectionSummary, data.accounts]);
+
+    const containerRef = useRef<HTMLDivElement | null>(null);
 
   const handleExportPDF = async () => {
     if (!containerRef.current) return;
@@ -419,5 +430,16 @@ export default function Dashboard({ data, projectionSummary }: DashboardProps) {
         </div>
       </div>
     </div>
-  );
+    );
+  } catch (err) {
+    console.error('Dashboard render error:', err);
+    return (
+      <div className="p-8">
+        <div className="bg-red-900/30 border-2 border-red-700 rounded-lg p-8">
+          <p className="text-red-300">Error rendering dashboard:</p>
+          <p className="text-red-200 text-sm mt-2 font-mono">{err instanceof Error ? err.message : 'Unknown error'}</p>
+        </div>
+      </div>
+    );
+  }
 }
