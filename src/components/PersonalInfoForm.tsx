@@ -13,22 +13,25 @@ export default function PersonalInfoForm({ data, onUpdate }: PersonalInfoFormPro
   const currentYear = new Date().getFullYear();
 
   const handleUserChange = (field: keyof PersonalInfo, value: any) => {
+    // Coerce numeric fields to numbers; keep `name` as string
+    const newValue = field === 'name' ? value : Number(value);
     onUpdate({
       ...household,
       user: {
         ...household.user,
-        [field]: typeof value === 'string' ? value : Number(value),
+        [field]: newValue,
       },
     });
   };
 
   const handleSpouseChange = (field: keyof PersonalInfo, value: any) => {
     if (!household.spouse) return;
+    const newValue = field === 'name' ? value : Number(value);
     onUpdate({
       ...household,
       spouse: {
         ...household.spouse,
-        [field]: typeof value === 'string' ? value : Number(value),
+        [field]: newValue,
       },
     });
   };
@@ -77,7 +80,7 @@ export default function PersonalInfoForm({ data, onUpdate }: PersonalInfoFormPro
               className="w-full"
             />
             <div className="form-hint">
-              Current age: {currentYear - household.user.birthYear}
+              Current age: {currentYear - Number(household.user.birthYear)}
             </div>
           </div>
 
@@ -92,7 +95,7 @@ export default function PersonalInfoForm({ data, onUpdate }: PersonalInfoFormPro
               className="w-full"
             />
             <div className="form-hint">
-              Retirement year: {household.user.birthYear + household.user.retirementAge}
+              Retirement year: {Number(household.user.birthYear) + Number(household.user.retirementAge)}
             </div>
           </div>
 
@@ -107,7 +110,7 @@ export default function PersonalInfoForm({ data, onUpdate }: PersonalInfoFormPro
               className="w-full"
             />
             <div className="form-hint">
-              Expected year: {household.user.birthYear + household.user.lifeExpectancyAge}
+              Expected year: {Number(household.user.birthYear) + Number(household.user.lifeExpectancyAge)}
             </div>
           </div>
         </div>
@@ -147,7 +150,7 @@ export default function PersonalInfoForm({ data, onUpdate }: PersonalInfoFormPro
                 className="w-full"
               />
               <div className="form-hint">
-                Current age: {currentYear - household.spouse.birthYear}
+                Current age: {currentYear - Number(household.spouse.birthYear)}
               </div>
             </div>
 
@@ -162,7 +165,7 @@ export default function PersonalInfoForm({ data, onUpdate }: PersonalInfoFormPro
                 className="w-full"
               />
               <div className="form-hint">
-                Retirement year: {household.spouse.birthYear + household.spouse.retirementAge}
+                Retirement year: {Number(household.spouse.birthYear) + Number(household.spouse.retirementAge)}
               </div>
             </div>
 
@@ -177,7 +180,7 @@ export default function PersonalInfoForm({ data, onUpdate }: PersonalInfoFormPro
                 className="w-full"
               />
               <div className="form-hint">
-                Expected year: {household.spouse.birthYear + household.spouse.lifeExpectancyAge}
+                Expected year: {Number(household.spouse.birthYear) + Number(household.spouse.lifeExpectancyAge)}
               </div>
             </div>
           </div>

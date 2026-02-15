@@ -6,7 +6,7 @@ import { TrendingUp, Target, Calendar, DollarSign } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell
+  PieChart, Pie, Cell, ReferenceLine
 } from 'recharts';
 
 interface DashboardProps {
@@ -57,8 +57,14 @@ export default function Dashboard({ data, projectionSummary }: DashboardProps) {
                                 maxVal >= 1_000 ? { divisor: 1_000, suffix: 'k' } : 
                                 { divisor: 1, suffix: '' };
 
-        const chartDataLimit = Math.min(30, projectionSummary.projections.length);
-        const calculatedChartData = projectionSummary.projections.slice(0, chartDataLimit).map(proj => ({
+        // Scale charts from current projection start up to max life expectancy + 10 years
+        const startYear = projectionSummary.projections[0]?.year || currentYear;
+        const spouseLife = data.household.spouse ? Number(data.household.spouse.birthYear) + Number(data.household.spouse.lifeExpectancyAge) : 0;
+        const maxLifeYear = Math.max(Number(user.birthYear) + Number(user.lifeExpectancyAge), spouseLife || 0);
+        const endYear = Math.min(projectionSummary.projections[projectionSummary.projections.length - 1]?.year || startYear, maxLifeYear + 10);
+        const ranged = projectionSummary.projections.filter(p => p.year >= startYear && p.year <= endYear);
+
+        const calculatedChartData = ranged.map(proj => ({
           year: proj.year,
           portfolio: +(proj.portfolioValueAfter / calculatedScale.divisor).toFixed(2),
           lowerLimit: +(proj.portfolioValueAfterLowerLimit / calculatedScale.divisor).toFixed(2),
@@ -179,7 +185,7 @@ export default function Dashboard({ data, projectionSummary }: DashboardProps) {
               {yearsToRetirement}
             </p>
             <p className="text-xs text-gray-500">
-              Target: {retirementYear}
+              Target: Age {user.retirementAge}
             </p>
           </div>
         </div>
@@ -294,6 +300,12 @@ export default function Dashboard({ data, projectionSummary }: DashboardProps) {
                 fillOpacity={0}
                 name="Conservative"
               />
+              {/* Reference lines: retirements and life expectancy */}
+              <ReferenceLine x={retirementYear} stroke="#f97316" strokeDasharray="3 3" label={{ value: 'Retire (You)', position: 'top' }} />
+              {data.household.spouse && (
+                <ReferenceLine x={Number(data.household.spouse.birthYear) + Number(data.household.spouse.retirementAge)} stroke="#60a5fa" strokeDasharray="3 3" label={{ value: 'Retire (Spouse)', position: 'top' }} />
+              )}
+              <ReferenceLine x={lifeExpectancyYear} stroke="#34d399" strokeDasharray="4 4" label={{ value: 'Life Expectancy', position: 'top' }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -316,6 +328,8 @@ export default function Dashboard({ data, projectionSummary }: DashboardProps) {
               <Legend />
               <Bar dataKey="contributions" fill="#00ff41" name="Contributions" radius={[4, 4, 0, 0]} />
               <Bar dataKey="withdrawals" fill="#d946ef" name="Withdrawals" radius={[4, 4, 0, 0]} />
+              <ReferenceLine x={retirementYear} stroke="#f97316" strokeDasharray="3 3" />
+              <ReferenceLine x={lifeExpectancyYear} stroke="#34d399" strokeDasharray="4 4" />
             </BarChart>
           </ResponsiveContainer>
         </div>
