@@ -163,10 +163,8 @@ export const useRetirementCalculator = () => {
   useEffect(() => {
     if (!data || shouldSkipCalculation) return;
 
-    const saveAndCalculate = async () => {
+    const timeoutId = setTimeout(async () => {
       try {
-        console.info('💾 Saving and calculating...');
-        
         // Validate data before calculating
         if (!data.household || !data.accounts) {
           console.warn('⚠️ Invalid data structure, skipping calculation', { household: !!data.household, accounts: !!data.accounts });
@@ -208,17 +206,15 @@ export const useRetirementCalculator = () => {
           const errorMsg = calcErr instanceof Error ? calcErr.message : 'Unknown error';
           console.error('❌ Calculation error:', calcErr, { message: errorMsg });
           setError(`Calculation failed: ${errorMsg}`);
-          setShouldSkipCalculation(true); // Stop retrying with bad data
+          // Don't skip calculation - allow retry on data change
         }
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Unknown error';
         console.error('❌ Failed to save or calculate:', err);
         setError(`Error: ${errorMsg}`);
-        setShouldSkipCalculation(true);
       }
-    };
+    }, 500); // Debounce calculations
 
-    const timeoutId = setTimeout(saveAndCalculate, 500); // Debounce calculations
     return () => clearTimeout(timeoutId);
   }, [data, shouldSkipCalculation]);
 
