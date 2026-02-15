@@ -41,27 +41,27 @@ export default function Dashboard({ data, projectionSummary }: DashboardProps) {
     const goalProgress = (currentPortfolioValue / goalAmount) * 100;
 
     // Memoize all data transformations to prevent infinite re-renders
-    const { scale, chartData, accountBreakdown } = useMemo(() => {
+    const { scale, chartData, accountBreakdown, fullChartData } = useMemo(() => {
       try {
         if (!projectionSummary?.projections || projectionSummary.projections.length === 0) {
-          return { scale: { divisor: 1, suffix: '' }, chartData: [], accountBreakdown: [] };
+          return { scale: { divisor: 1, suffix: '' }, chartData: [], accountBreakdown: [], fullChartData: [] };
         }
 
         const maxVal = Math.max(...projectionSummary.projections.map(p => Math.max(p.portfolioValueAfter || 0, p.portfolioValueAfterLowerLimit || 0, p.portfolioValueAfterUpperLimit || 0)));
         
         if (!Number.isFinite(maxVal) || maxVal < 0) {
-          return { scale: { divisor: 1, suffix: '' }, chartData: [], accountBreakdown: [] };
+          return { scale: { divisor: 1, suffix: '' }, chartData: [], accountBreakdown: [], fullChartData: [] };
         }
 
         const calculatedScale = maxVal >= 1_000_000 ? { divisor: 1_000_000, suffix: 'M' } : 
                                 maxVal >= 1_000 ? { divisor: 1_000, suffix: 'k' } : 
                                 { divisor: 1, suffix: '' };
 
-        // Scale charts from current projection start up to max life expectancy + 10 years
+        // Scale charts from current projection start up to max life expectancy + 5 years
         const startYear = projectionSummary.projections[0]?.year || currentYear;
         const spouseLife = data.household.spouse ? Number(data.household.spouse.birthYear) + Number(data.household.spouse.lifeExpectancyAge) : 0;
         const maxLifeYear = Math.max(Number(user.birthYear) + Number(user.lifeExpectancyAge), spouseLife || 0);
-        const endYear = Math.min(projectionSummary.projections[projectionSummary.projections.length - 1]?.year || startYear, maxLifeYear + 10);
+        const endYear = Math.min(projectionSummary.projections[projectionSummary.projections.length - 1]?.year || startYear, maxLifeYear + 5);
         const ranged = projectionSummary.projections.filter(p => p.year >= startYear && p.year <= endYear);
 
         const calculatedChartData = ranged.map(proj => ({
@@ -79,10 +79,21 @@ export default function Dashboard({ data, projectionSummary }: DashboardProps) {
           value: acc.currentValue,
         }));
 
-        return { scale: calculatedScale, chartData: calculatedChartData, accountBreakdown: calculatedAccountBreakdown };
-      } catch (err) {
+        // Also prepare an un-ranged dataset for charts that should show full projection span (e.g., annual cash flow)
+        const fullChartData = projectionSummary.projections.map(proj => ({
+          year: proj.year,
+          portfolio: +(proj.portfolioValueAfter / calculatedScale.divisor).toFixed(2),
+          lowerLimit: +(proj.portfolioValueAfterLowerLimit / calculatedScale.divisor).toFixed(2),
+          upperLimit: +(proj.portfolioValueAfterUpperLimit / calculatedScale.divisor).toFixed(2),
+          withdrawals: +(proj.withdrawals / calculatedScale.divisor).toFixed(2),
+          contributions: +(proj.contributions / calculatedScale.divisor).toFixed(2),
+          income: +(proj.totalIncome / calculatedScale.divisor).toFixed(2),
+        }));
+
+        return { scale: calculatedScale, chartData: calculatedChartData, accountBreakdown: calculatedAccountBreakdown, fullChartData };
+        } catch (err) {
         console.error('Error in Dashboard memoization:', err);
-        return { scale: { divisor: 1, suffix: '' }, chartData: [], accountBreakdown: [] };
+        return { scale: { divisor: 1, suffix: '' }, chartData: [], accountBreakdown: [], fullChartData: [] };
       }
     }, [projectionSummary, data.accounts]);
 
@@ -316,7 +327,7 @@ export default function Dashboard({ data, projectionSummary }: DashboardProps) {
             Annual Cash Flow
           </h3>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartData}>
+            <BarChart data={fullChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#2d2d2d" />
               <XAxis dataKey="year" stroke="#7d7d7d" style={{ fontSize: '12px' }} />
               <YAxis stroke="#7d7d7d" style={{ fontSize: '12px' }} tickFormatter={(val) => `$${val}${scale.suffix}`} />
@@ -328,8 +339,8 @@ export default function Dashboard({ data, projectionSummary }: DashboardProps) {
               <Legend />
               <Bar dataKey="contributions" fill="#00ff41" name="Contributions" radius={[4, 4, 0, 0]} />
               <Bar dataKey="withdrawals" fill="#d946ef" name="Withdrawals" radius={[4, 4, 0, 0]} />
-              <ReferenceLine x={retirementYear} stroke="#f97316" strokeDasharray="3 3" />
-              <ReferenceLine x={lifeExpectancyYear} stroke="#34d399" strokeDasharray="4 4" />
+              <ReferenceLine x={retirementYear} stroke="#f97316" strokeDasharray="3 3" label={{ value: 'Retire (You)', position: 'top' }} />
+              <ReferenceLine x={lifeExpectancyYear} stroke="#34d399" strokeDasharray="4 4" label={{ value: 'Life Expectancy', position: 'top' }} />
             </BarChart>
           </ResponsiveContainer>
         </div>

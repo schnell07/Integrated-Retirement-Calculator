@@ -22,14 +22,14 @@ export default function ProjectionCharts({ data, projectionSummary }: Projection
 
   // Memoize all chart data transformations to prevent infinite re-renders
   const { portfolioData, cashFlowData, incomeData, firstProjection, lastProjection, goalYear, userRetirementYear, spouseRetirementYear, lifeExpectancyYear } = useMemo(() => {
-    // Determine range: from current projection start to max life expectancy + 10 years
+    // Determine range: from current projection start to max life expectancy + 5 years
     const startYear = projections[0]?.year || new Date().getFullYear();
     const userRetYr = Number(data.household.user.birthYear) + Number(data.household.user.retirementAge);
     const spouseRetYr = data.household.spouse ? Number(data.household.spouse.birthYear) + Number(data.household.spouse.retirementAge) : null;
     const userLifeYr = Number(data.household.user.birthYear) + Number(data.household.user.lifeExpectancyAge);
     const spouseLifeYr = data.household.spouse ? Number(data.household.spouse.birthYear) + Number(data.household.spouse.lifeExpectancyAge) : null;
     const maxLifeYr = Math.max(userLifeYr, spouseLifeYr || 0);
-    const endYear = Math.min(projections[projections.length - 1]?.year || startYear, maxLifeYr + 10);
+    const endYear = Math.min(projections[projections.length - 1]?.year || startYear, maxLifeYr + 5);
 
     const ranged = projections.filter(p => p.year >= startYear && p.year <= endYear);
 
@@ -40,7 +40,7 @@ export default function ProjectionCharts({ data, projectionSummary }: Projection
       projectedGoal: Math.round(data.financialInputs.savingsGoal),
     }));
 
-    // Cash flow data
+    // Cash flow data (use full projections — do not limit range)
     const cashFlowTransformed = projections.map(p => ({
       year: p.year,
       contributions: Math.round(p.contributions),
@@ -48,8 +48,8 @@ export default function ProjectionCharts({ data, projectionSummary }: Projection
       withdrawals: Math.round(p.withdrawals),
     }));
 
-    // Income timeline
-    const incomeTransformed = projections.map(p => ({
+    // Income timeline (match ranged span used for portfolio charts)
+    const incomeTransformed = ranged.map(p => ({
       year: p.year,
       userIncome: Math.round(p.incomeUser),
       spouseIncome: Math.round(p.incomeSpouse),
@@ -187,9 +187,9 @@ export default function ProjectionCharts({ data, projectionSummary }: Projection
               <Bar dataKey="contributions" fill="#10b981" name="Contributions" />
               <Bar dataKey="growth" fill="#3b82f6" name="Investment Growth" />
               <Bar dataKey="withdrawals" fill="#ef4444" name="Withdrawals" />
-              {userRetirementYear && <ReferenceLine x={userRetirementYear} stroke="#f97316" strokeDasharray="3 3" />}
-              {spouseRetirementYear && <ReferenceLine x={spouseRetirementYear} stroke="#60a5fa" strokeDasharray="3 3" />}
-              {lifeExpectancyYear && <ReferenceLine x={lifeExpectancyYear} stroke="#34d399" strokeDasharray="4 4" />}
+              {userRetirementYear && <ReferenceLine x={userRetirementYear} stroke="#f97316" strokeDasharray="3 3" label={{ value: 'Retire (You)', position: 'top' }} />}
+              {spouseRetirementYear && <ReferenceLine x={spouseRetirementYear} stroke="#60a5fa" strokeDasharray="3 3" label={{ value: 'Retire (Spouse)', position: 'top' }} />}
+              {lifeExpectancyYear && <ReferenceLine x={lifeExpectancyYear} stroke="#34d399" strokeDasharray="4 4" label={{ value: 'Life Expectancy', position: 'top' }} />}
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -238,9 +238,9 @@ export default function ProjectionCharts({ data, projectionSummary }: Projection
                 name="Total Income"
                 strokeWidth={2}
               />
-              {userRetirementYear && <ReferenceLine x={userRetirementYear} stroke="#f97316" strokeDasharray="3 3" />}
-              {spouseRetirementYear && <ReferenceLine x={spouseRetirementYear} stroke="#60a5fa" strokeDasharray="3 3" />}
-              {lifeExpectancyYear && <ReferenceLine x={lifeExpectancyYear} stroke="#34d399" strokeDasharray="4 4" />}
+              {userRetirementYear && <ReferenceLine x={userRetirementYear} stroke="#f97316" strokeDasharray="3 3" label={{ value: 'Retire (You)', position: 'top' }} />}
+              {spouseRetirementYear && <ReferenceLine x={spouseRetirementYear} stroke="#60a5fa" strokeDasharray="3 3" label={{ value: 'Retire (Spouse)', position: 'top' }} />}
+              {lifeExpectancyYear && <ReferenceLine x={lifeExpectancyYear} stroke="#34d399" strokeDasharray="4 4" label={{ value: 'Life Expectancy', position: 'top' }} />}
             </LineChart>
           </ResponsiveContainer>
         </div>
