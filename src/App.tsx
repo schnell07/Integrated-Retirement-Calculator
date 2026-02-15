@@ -28,6 +28,8 @@ export default function App() {
     addIncomeSource,
     updateIncomeSource,
     deleteIncomeSource,
+    resetToDefaults,
+    retryCalculation,
   } = useRetirementCalculator();
 
   if (isLoading) {
@@ -50,19 +52,25 @@ export default function App() {
             <p className="text-red-200 mb-4">{error}</p>
             <div className="space-y-2">
               <button
-                onClick={() => window.location.reload()}
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                onClick={retryCalculation}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
               >
-                Reload Application
+                Retry Calculation
+              </button>
+              <button
+                onClick={resetToDefaults}
+                className="w-full bg-yellow-700 hover:bg-yellow-800 text-white font-bold py-2 px-4 rounded"
+              >
+                Reset to Defaults
               </button>
               <button
                 onClick={() => {
                   localStorage.clear();
                   window.location.reload();
                 }}
-                className="w-full bg-yellow-700 hover:bg-yellow-800 text-white font-bold py-2 px-4 rounded"
+                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
               >
-                Clear Data & Reload
+                Clear All Data & Reload
               </button>
             </div>
           </div>

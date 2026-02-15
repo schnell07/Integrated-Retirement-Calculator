@@ -34,6 +34,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   render() {
     if (this.state.hasError) {
       const { error, errorInfo, showFullDetails } = this.state;
+      const isStackOverflow = error?.message.includes('stack') || error?.message.includes('Maximum call');
       
       return (
         <div className="flex items-center justify-center min-h-screen bg-gray-950 p-4">
@@ -42,7 +43,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
               <AlertTriangle size={32} className="text-red-400 flex-shrink-0" />
               <div>
                 <h1 className="text-2xl font-bold text-red-300">Application Error</h1>
-                <p className="text-red-200 text-sm">Something went wrong. Details below:</p>
+                {isStackOverflow && (
+                  <p className="text-yellow-300 text-sm font-bold">⚠️ Infinite loop detected - clearing data may help</p>
+                )}
               </div>
             </div>
 
@@ -95,7 +98,14 @@ export class ErrorBoundary extends React.Component<Props, State> {
               <button
                 onClick={() => {
                   localStorage.clear();
-                  window.location.reload();
+                  sessionStorage.clear();
+                  try {
+                    const req = indexedDB.deleteDatabase('retirement_calculator');
+                    req.onsuccess = () => window.location.reload();
+                    req.onerror = () => window.location.reload();
+                  } catch {
+                    window.location.reload();
+                  }
                 }}
                 className="w-full bg-yellow-700 hover:bg-yellow-800 text-white font-bold py-2 px-4 rounded transition-all"
               >

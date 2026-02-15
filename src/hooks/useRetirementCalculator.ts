@@ -11,6 +11,7 @@ export const useRetirementCalculator = () => {
   const [projectionSummary, setProjectionSummary] = useState<ProjectionSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [shouldSkipCalculation, setShouldSkipCalculation] = useState(false);
 
   // Initialize and load data
   useEffect(() => {
@@ -42,6 +43,19 @@ export const useRetirementCalculator = () => {
           incomeSourcesCount: (savedData?.incomeSourcesUser?.length || 0) + (savedData?.incomeSourcesSpouse?.length || 0),
         });
         
+        // Sanitize growth rates to ensure they're within valid bounds
+        if (savedData.financialInputs) {
+          const sanitized = { ...savedData.financialInputs };
+          if (sanitized.growthRateLowerLimit < -0.5 || sanitized.growthRateLowerLimit > 0.5 || 
+              sanitized.growthRateUpperLimit < -0.5 || sanitized.growthRateUpperLimit > 0.5 ||
+              sanitized.growthRateLowerLimit > sanitized.growthRateUpperLimit) {
+            console.warn('⚠️ Invalid growth rates detected in saved data, resetting to defaults');
+            sanitized.growthRateLowerLimit = 0.03;
+            sanitized.growthRateUpperLimit = 0.10;
+            savedData = { ...savedData, financialInputs: sanitized };
+          }
+        }
+        
         setData(savedData);
         setError(null);
       } catch (err) {
@@ -60,7 +74,7 @@ export const useRetirementCalculator = () => {
 
   // Auto-save data and recalculate when data changes
   useEffect(() => {
-    if (!data) return;
+    if (!data || shouldSkipCalculation) return;
 
     const saveAndCalculate = async () => {
       try {
@@ -102,22 +116,24 @@ export const useRetirementCalculator = () => {
           });
           setProjectionSummary(summary);
           setError(null); // Clear any previous errors
+          setShouldSkipCalculation(false);
         } catch (calcErr) {
-          console.error('❌ Calculation error:', calcErr, { 
-            message: calcErr instanceof Error ? calcErr.message : 'Unknown error',
-            stack: calcErr instanceof Error ? calcErr.stack : undefined,
-          });
-          setError(`Calculation failed: ${calcErr instanceof Error ? calcErr.message : 'Unknown error'}`);
+          const errorMsg = calcErr instanceof Error ? calcErr.message : 'Unknown error';
+          console.error('❌ Calculation error:', calcErr, { message: errorMsg });
+          setError(`Calculation failed: ${errorMsg}`);
+          setShouldSkipCalculation(true); // Stop retrying with bad data
         }
       } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
         console.error('❌ Failed to save or calculate:', err);
-        setError(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        setError(`Error: ${errorMsg}`);
+        setShouldSkipCalculation(true);
       }
     };
 
     const timeoutId = setTimeout(saveAndCalculate, 500); // Debounce calculations
     return () => clearTimeout(timeoutId);
-  }, [data]);
+  }, [data, shouldSkipCalculation]);
 
   const updateData = useCallback((updates: Partial<RetirementCalculatorData>) => {
     setData(prev => prev ? { ...prev, ...updates } : null);
@@ -206,6 +222,25 @@ export const useRetirementCalculator = () => {
     });
   }, []);
 
+  const resetToDefaults = useCallback(async () => {
+    const defaults = useRetirementCalculatorInitial();
+    setData(defaults);
+    setShouldSkipCalculation(false);
+    setError(null);
+    try {
+      await db.saveData(defaults);
+      localStorageService.saveKey(AUTOSAVE_KEY, defaults);
+      console.info('✅ Reset to default data');
+    } catch (err) {
+      console.warn('⚠️ Failed to save reset data:', err);
+    }
+  }, []);
+
+  const retryCalculation = useCallback(() => {
+    setShouldSkipCalculation(false);
+    setError(null);
+  }, []);
+
   return {
     data,
     projectionSummary,
@@ -220,6 +255,8 @@ export const useRetirementCalculator = () => {
     addIncomeSource,
     updateIncomeSource,
     deleteIncomeSource,
+    resetToDefaults,
+    retryCalculation,
   };
 };
 
